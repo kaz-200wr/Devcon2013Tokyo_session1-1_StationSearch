@@ -1,0 +1,86 @@
+<apex:page docType="html-5.0"
+           showHeader="false"
+           sidebar="false"
+           standardStylesheets="false"
+           Controller="TemplateSample_mapController">
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Mobile Template - stationmap</title>
+    <meta name="description" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1,  minimum-scale=1, maximum-scale=1" />
+    <apex:stylesheet value="{!URLFOR($Resource.Mobile_Design_Templates, 'Mobile-Design-Templates-master/common/css/app.min.css')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.Mobile_Design_Templates, 'Mobile-Design-Templates-master/common/js/jQuery2.0.2.min.js')}"/>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+
+    <apex:includeScript value="{!URLFOR($Resource.Mobile_Design_Templates, 'Mobile-Design-Templates-master/common/js/jquery.touchwipe.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.Mobile_Design_Templates, 'Mobile-Design-Templates-master/common/js/main.min.js')}"/>
+    <apex:includeScript value="{!$Resource.underscore_1_5_1}"/>
+    <apex:includeScript value="{!$Resource.path_js}"/>
+
+<script>
+$(document).ready(function() {
+    getAllStations(function(markers){
+        mapObj.init({
+            view: "fullView",
+            markers: markers
+        });
+    });
+});
+
+function getAllStations(sucsess){
+    Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.TemplateSample_mapController.getStationRecs}',
+        function(records, e) {
+            var markers = setMarkers(records);
+            sucsess(markers);
+        },
+        {escape:false});
+}
+
+function setMarkers(records){
+    var markers=[];
+    for(var i = 0; i < records.length; i++) {
+        var marker={
+            id: records[i].Id,
+            lat: records[i].Location__Latitude__s,
+            lng: records[i].Location__Longitude__s,
+            contentString: records[i].Name
+        };
+        markers.push(marker);
+    }
+    return markers;
+}
+
+</script>
+<style>
+.gm-style .gm-style-iw, .gm-style .gm-style-iw a, .gm-style .gm-style-iw span, .gm-style .gm-style-iw label, .gm-style .gm-style-iw div {
+    width: 200px;
+    height: 100px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app-wrapper">
+
+<nav class="main-menu">
+<a href="#">Something</a>
+<a href="#">Something</a>
+</nav><!--#main-menu-->
+
+<header>
+<div class="main-menu-button main-menu-button-left"><a class="menu">&nbsp;</a></div>
+<h1>stations</h1>
+</header>
+
+<div class="app-content">
+
+<div id="map-canvas-wrapper">&nbsp;</div>
+
+</div><!--#app-content-->
+</div><!--#app-wrapper-->
+
+</body>
+</html>
+</apex:page>

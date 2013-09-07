@@ -1,0 +1,108 @@
+<apex:page docType="html-5.0"
+           showHeader="false"
+           sidebar="false"
+           standardController="Station__c">
+    <apex:stylesheet value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'jquery.mobile-1.3.0.min.css')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'jquery-1.9.1.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'jquery.mobile-1.3.0.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'cordova.force.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'backbone/underscore-1.4.4.min.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'force.entity.js')}"/>
+    <apex:includeScript value="{!URLFOR($Resource.MobileSample_Resources_jQueryMobile, 'SObjectData.js')}"/>
+    <head>
+        <meta charset="utf-8" />
+        <title>jQuery Mobile - stationmap</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+        <script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=true"></script>
+        <c:RemoteTK />
+
+        <script type="text/javascript">
+            var $j = jQuery.noConflict();
+
+            var client = new remotetk.Client();
+            Force.init(null,null,client,null);
+
+            var Stations = new SObjectData();
+            Stations.errorHandler = displayError;
+
+            //googlemap
+            var map;
+            var markers = [];
+            var infowindow;
+
+            $j(document).ready(function() {
+                var opts = {
+                    zoom: 13,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+
+                map = new google.maps.Map($j('#map')[0], opts);
+                infowindow = new google.maps.InfoWindow();
+
+                navigator.geolocation.watchPosition(
+                    function(position){
+                        getAllStations();
+
+                        var marker = new google.maps.Marker({
+                            position: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+                            title: this.Name,
+                            icon: 'http://chart.apis.google.com/chart?chst=d_map_pin_letter&chld=|7FFF00|000000'
+                        });
+                        map.setCenter(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
+                        marker.setMap(map);
+                    }
+                );
+            });
+
+            function getAllStations() {
+                Stations.fetch('soql','select id, name, Location__latitude__s, Location__longitude__s, Address__c from Station__c order by Name limit 10000',function() {
+                    setMarkers(Stations.data());
+                });
+            }
+
+            function setMarkers(records) {
+                markers = [];
+                $j(records).each(function() {
+                    var marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(this.Location__Latitude__s, this.Location__Longitude__s),
+                        title: this.Name
+                    });
+
+                    var html='<div style="width:200px;height:100px;">' + this.Name + '</div>';
+
+                    google.maps.event.addListener(marker, 'click', function() {
+                        infowindow.setContent(html);
+                        infowindow.open(map, marker);
+                    });
+                    marker.setMap(map);
+                    markers.push(marker);
+                });
+
+                $j.mobile.hidePageLoadingMsg();
+            }
+
+            function successCallback(r){
+                getAllStations();
+                $j.mobile.changePage('#listpage', {changeHash: true});
+            }
+
+            function displayError(e){
+                console.log(e);
+                $j('#error').html(e[0].message);
+            }
+
+        </script>
+    </head>
+
+    <body>
+        <div data-role="page" data-theme="b" id="listpage">
+            <div data-role="header" data-position="fixed">
+                <h2>Stations</h2>
+            </div>
+            <div data-role="content" style="padding:0;position: absolute;top: 0;bottom: 0;left: 0;right: 0;">
+                <div id="map" style="width:100%; height:100%" ></div>
+            </div>
+        </div>
+
+    </body>
+</apex:page>

@@ -1,0 +1,98 @@
+<apex:page controller="GeocodingStationMapController">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+    <script type="text/javascript" src="https://rawgithub.com/jquery/jquery-tmpl/master/jquery.tmpl.min.js"></script>
+    <script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false"></script>
+    <script type="text/javascript">
+        j$ = jQuery.noConflict();
+
+        var map;
+        var markers = [];
+        var infowindow;
+
+        j$(document).ready(function(){
+            var opts = {
+                zoom: 10,
+                center: new google.maps.LatLng(35.6604005, 139.7290428),
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+            };
+            map = new google.maps.Map(j$('#map')[0], opts);
+            infowindow = new google.maps.InfoWindow();
+            doSearch();
+        });
+        function doSearch() {
+            var center = map.getCenter();
+            debugger;
+            search(center.lat(), center.lng());
+        }
+        function escapeVFId(vfid) {
+          return vfid.replace(/:/g,'\\:');
+        }
+        function reRender() {
+            // clear markers
+            j$(markers).each(function() {
+                this.setMap(null);
+            });
+            markers = [];
+            // set new markers
+            var json = j$('#' + escapeVFId('{!$Component.search_form.json_str}')).val();
+            var data = j$.parseJSON(json);
+            if (data.length > 0) {
+                j$(data).each(function() {
+                    var marker = new google.maps.Marker({
+                        position: new google.maps.LatLng(this['lat'], this['lng']),
+                        title: this['name'],
+                    });
+                    var html = j$('#infoWindowTemplate').tmpl(this).html();
+                    google.maps.event.addListener(marker, 'click', function() {
+                        infowindow.setContent(html);
+                        infowindow.open(map, marker);
+                    });
+                    marker.setMap(map);
+                    markers.push(marker);
+                });
+                map.setCenter(new google.maps.LatLng(data[0]['lat'], data[0]['lng']));
+            } else {
+                alert('Not found.');
+            }
+        }
+    </script>
+    <script id="infoWindowTemplate" type="text/x-jquery-tmpl">
+        <div class="dummy">
+            <b><a href="/${id}" target="__blank">${name}</a></b><br/>
+            <p>住所：${address}</p>
+        </div>
+    </script>
+    <apex:form id="search_form">
+        <apex:inputHidden value="{!json_str}" id="json_str" />
+        <apex:actionFunction action="{!search}" name="search" reRender="search_form" status="loading" oncomplete="reRender();">
+            <apex:param assignTo="{!center_lat}" name="center_lat" value="" />
+            <apex:param assignTo="{!center_lng}" name="center_lng" value="" />
+        </apex:actionFunction>
+        <div style="width:100%;">
+            <table>
+                <tbody>
+                    <tr>
+                        <th>Filter:&nbsp;</th>
+                        <th><apex:outputLabel >Name</apex:outputLabel></th><td><apex:inputText value="{!name}" /></td>
+                        <th><apex:outputLabel >Address</apex:outputLabel></th><td><apex:inputText value="{!address}" /></td>
+                        <th>Max records</th>
+                        <td>
+                            <apex:selectList value="{!maxrecords}" size="1">
+                                <apex:selectOptions value="{!options}"/>
+                            </apex:selectList>
+                        </td>
+                        <td>
+                            <apex:commandButton value="Search" onclick="doSearch();return false;" />
+                            <apex:actionStatus id="loading">
+                                <apex:facet name="start">
+                                    <apex:image value="{!$Resource.GeocodingMapLoading}" alt="loading.." />
+                                </apex:facet>
+                            </apex:actionStatus>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </apex:form>
+    <div id="map" style="width:100%; height:600px">&nbsp;</div>
+</apex:page>
