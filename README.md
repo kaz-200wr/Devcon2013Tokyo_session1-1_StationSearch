@@ -1,4 +1,4 @@
-Statinosearch
+StationSearch visualforce page
 ===============
 Salesforce.com Sample Visualforce pages.
 
